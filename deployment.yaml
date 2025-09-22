@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: APP_NAME-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: APP_NAME
+  template:
+    metadata:
+      labels:
+        app: APP_NAME
+    spec:
+      containers:
+      - name: APP_NAME-container
+        image: 73333/APP_NAME:DOCKER_IMAGE_TAG
+        ports:
+        - containerPort: 8000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: APP_NAME-service
+spec:
+  selector:
+    app: APP_NAME
+  ports:
+    - protocol: TCP
+      port: 80        # Cluster-wide service port
+      targetPort: 8000  # Matches containerPort in Deployment (your app.py)
+      nodePort: 30080   # External NodePort (optional: must be 30000–32767)
+  type: NodePort
+

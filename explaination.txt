@@ -1,0 +1,165 @@
+#!/bin/bash tells the OS to run the script with bash.
+
+2. Parameter check
+
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 <app_name> <version>"
+    exit 1
+fi
+
+
+$# = number of positional parameters passed.
+If not exactly 2 args, script prints usage and exits with code 1 (error). This prevents accidental runs with missing args.
+
+
+3. Read parameters
+
+APP_NAME=$1
+DOCKER_IMAGE_TAG=$2
+
+$1 and $2 are the first and second CLI arguments.
+
+APP_NAME is the repository/app name; DOCKER_IMAGE_TAG is the image tag/version.
+
+
+4. Docker user and full image name
+
+
+DOCKER_USER="73333"
+DOCKER_IMAGE_NAME="$DOCKER_USER/$APP_NAME"
+
+
+DOCKER_USER = Docker Hub username (hardcoded here).
+DOCKER_IMAGE_NAME becomes 73333/raina for the example.
+
+
+5. Template paths
+
+
+DEPLOYMENT_TEMPLATE="./deployment.yaml"
+SERVICE_TEMPLATE="./service.yaml"
+
+
+6. Output filenames
+
+DEPLOYMENT_YAML="./${APP_NAME}-deployment.yaml"
+SERVICE_YAML="./${APP_NAME}-service.yaml"
+
+
+The script writes app-specific files like raina-deployment.yaml and raina-service.yaml 
+(so you get separate YAMLs per app, not overwriting the templates).
+
+
+7. Git repo info
+
+GIT_REPO_URL="https://github.com/kanna333/main_automation.git"
+REPO_NAME="main_automation"
+
+
+8. Clone repo if it does not exist
+
+
+if [ ! -d "$REPO_NAME" ]; then
+    git clone $GIT_REPO_URL
+else
+    echo "Repo already exists, skipping clone."
+fi
+
+
+-d checks if directory exists. If not, git clone downloads the repo.
+
+If git isn't installed or network fails, git clone will error.
+
+
+
+9. Build & push Docker image
+
+cd $REPO_NAME || { echo "Repo directory not found"; exit 1; }
+docker build -t $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG .
+docker push $DOCKER_IMAGE_NAME:$DOCKER_IMAGE_TAG
+cd ..
+
+
+cd $REPO_NAME changes into repo directory (script exits if it fails).
+
+docker build -t <image:tag> . builds the image using the Dockerfile in the repo root, tagging it 73333/raina:3.3.3.
+
+docker push <image:tag> pushes the image to Docker Hub (or registry).
+
+Requirements:
+
+Docker installed and running.
+
+You are logged into Docker Hub (docker login) with credentials for 73333.
+
+The repo contains a working Dockerfile.
+
+Possible failures:
+
+Build errors -> check output of docker build.
+
+Push fails -> check docker login status or repo permissions.
+
+If image is private, cluster nodes later need credentials (imagePullSecrets).
+
+
+
+
+10. Generate Deployment YAML from template
+
+if [ -f "$DEPLOYMENT_TEMPLATE" ]; then
+    sed "s|APP_NAME|$APP_NAME|g; s|DOCKER_IMAGE_TAG|$DOCKER_IMAGE_TAG|g" \
+        "$DEPLOYMENT_TEMPLATE" > "$DEPLOYMENT_YAML"
+else
+    echo "Error: $DEPLOYMENT_TEMPLATE not found!"
+    exit 1
+fi
+
+
+
+1. if [ -f "$DEPLOYMENT_TEMPLATE" ]; then
+
+-f checks if a file exists.
+
+$DEPLOYMENT_TEMPLATE is a variable (likely pointing to deployment.yaml.template).
+
+So: If the template file exists, then run the following block.
+
+2. sed "s|APP_NAME|$APP_NAME|g; s|DOCKER_IMAGE_TAG|$DOCKER_IMAGE_TAG|g" \
+
+sed = stream editor, used here to replace placeholder text.
+
+s|A|B|g → means: substitute A with B globally (all matches).
+
+APP_NAME gets replaced with the value of $APP_NAME.
+
+DOCKER_IMAGE_TAG gets replaced with the value of $DOCKER_IMAGE_TAG.
+
+Important: the placeholders in the template must match APP_NAME and DOCKER_IMAGE_TAG exactly (case-sensitive).
+
+
+11. Generate Service YAML from template
+
+
+if [ -f "$SERVICE_TEMPLATE" ]; then
+    sed "s|APP_NAME|$APP_NAME|g" \
+        "$SERVICE_TEMPLATE" > "$SERVICE_YAML"
+else
+    echo "Error: $SERVICE_TEMPLATE not found!"
+    exit 1
+fi
+
+
+
+Replaces APP_NAME in the service template and writes raina-service.yaml.
+
+
+
+
+12.  finishing step,
+
+echo "✅ Deployment of $APP_NAME:$DOCKER_IMAGE_TAG completed successfully!"
+echo "   - Deployment file: $DEPLOYMENT_YAML"
+echo "   - Service file: $SERVICE_YAML"
+
+Friendly confirmation and filenames for inspection.
