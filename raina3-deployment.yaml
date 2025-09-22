@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raina3-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: raina3
+  template:
+    metadata:
+      labels:
+        app: raina3
+    spec:
+      containers:
+      - name: raina3-container
+        image: 73333/raina3:3.3.2
+        ports:
+        - containerPort: 8000
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: raina3-service
+spec:
+  selector:
+    app: raina3
+  ports:
+    - protocol: TCP
+      port: 80        # Cluster-wide service port
+      targetPort: 8000  # Matches containerPort in Deployment (your app.py)
+      nodePort: 30080   # External NodePort (optional: must be 30000–32767)
+  type: NodePort
+

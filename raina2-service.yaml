@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: raina2-service
+spec:
+  selector:
+    app: raina2
+  ports:
+    - protocol: TCP
+      port: 80        # Cluster-wide service port
+      targetPort: 8000  # Matches containerPort in Deployment (your app.py)
+      nodePort: 30080   # External NodePort (optional: must be 30000–32767)
+  type: NodePort
